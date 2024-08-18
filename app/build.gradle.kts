@@ -37,22 +37,39 @@ kotlin {
     }
 }
 
+val nativeLibsPath = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+    "$matlabroot/bin/win64"
+} else if (Os.isFamily(Os.FAMILY_MAC)) {
+    if (Os.isArch("aarch64")) {
+        "$matlabroot/bin/maca64"
+    } else {
+        "$matlabroot/bin/maci64"
+    }
+} else {
+    "$matlabroot/bin/glnxa64:$matlabroot/sys/os/glnxa64"
+}
+
+val nativeLibPathVar = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+    "PATH"
+} else if (Os.isFamily(Os.FAMILY_MAC)) {
+    "DYLD_LIBRARY_PATH"
+} else {
+    "LD_LIBRARY_PATH"
+}
+
 application {
     mainClass = "com.gt.matlab.jsonrpc.ServerKt"
-    val nativeLibsPath = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        "$matlabroot/bin/win64"
-    } else if (Os.isFamily(Os.FAMILY_MAC)) {
-        if (Os.isArch("aarch64")) {
-            "$matlabroot/bin/maca64"
-        } else {
-            "$matlabroot/bin/maci64"
-        }
-    } else {
-        "$matlabroot/bin/glnxa64:$matlabroot/sys/os/glnxa64"
-    }
+
     applicationDefaultJvmArgs = listOf("-Djava.library.path=$nativeLibsPath")
 }
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+tasks.register<Exec>("serveEngine") {
+    environment[nativeLibPathVar] = nativeLibsPath
+    commandLine(
+        "./build/install/app/bin/app"
+    )
 }
