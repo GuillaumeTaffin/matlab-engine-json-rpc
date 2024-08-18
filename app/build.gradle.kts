@@ -37,9 +37,12 @@ kotlin {
     }
 }
 
-val nativeLibsPath = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+val isWindows = Os.isFamily(Os.FAMILY_WINDOWS)
+val isMacOs = Os.isFamily(Os.FAMILY_MAC)
+
+val nativeLibsPath = if (isWindows) {
     "$matlabroot/bin/win64"
-} else if (Os.isFamily(Os.FAMILY_MAC)) {
+} else if (isMacOs) {
     if (Os.isArch("aarch64")) {
         "$matlabroot/bin/maca64"
     } else {
@@ -49,27 +52,30 @@ val nativeLibsPath = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
     "$matlabroot/bin/glnxa64:$matlabroot/sys/os/glnxa64"
 }
 
-val nativeLibPathVar = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+val nativeLibPathVar = if (isWindows) {
     "PATH"
-} else if (Os.isFamily(Os.FAMILY_MAC)) {
+} else if (isMacOs) {
     "DYLD_LIBRARY_PATH"
 } else {
     "LD_LIBRARY_PATH"
 }
 
-application {
-    mainClass = "com.gt.matlab.jsonrpc.ServerKt"
+val startScript =
 
-    applicationDefaultJvmArgs = listOf("-Djava.library.path=$nativeLibsPath")
-}
+    application {
+        mainClass = "com.gt.matlab.jsonrpc.ServerKt"
+
+        applicationDefaultJvmArgs = listOf("-Djava.library.path=$nativeLibsPath")
+    }
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
 tasks.register<Exec>("serveEngine") {
+    dependsOn("installDist")
     environment[nativeLibPathVar] = nativeLibsPath
     commandLine(
-        "./build/install/app/bin/app"
+        layout.buildDirectory.file("install/app/bin/app${if (isWindows) ".bat" else ""}").get()
     )
 }
